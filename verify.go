@@ -2,6 +2,7 @@ package verify
 
 import (
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -264,6 +265,23 @@ func (v *Verifier) NotPanic(fn func(), msg ...string) *Verifier {
 	}()
 	fn()
 
+	return v
+}
+
+// Contain verifica se a string contém a substring esperada
+func (v *Verifier) Contain(substring string) *Verifier {
+	str, ok := v.asString()
+	if !ok {
+		return v
+	}
+
+	if !strings.Contains(str, substring) {
+		message := "Expected string to contain the specified substring"
+		if v.message != "" {
+			message = v.message
+		}
+		v.t.Errorf("%s: expected string to contain '%s', but got '%s'", message, substring, str)
+	}
 	return v
 }
 
