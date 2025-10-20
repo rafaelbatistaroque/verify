@@ -9,12 +9,12 @@ import (
 // Verifier encapsula o valor e o estado do teste
 type Verifier struct {
 	t       *testing.T
-	value   interface{}
+	value   any
 	message string
 }
 
 // Should inicializa o Verifier
-func Should(t *testing.T, value interface{}) *Verifier {
+func Should(t *testing.T, value any) *Verifier {
 	return &Verifier{t: t, value: value}
 }
 
@@ -25,7 +25,7 @@ func (v *Verifier) Message(msg string) *Verifier {
 }
 
 // Be verifica igualdade estrita
-func (v *Verifier) Be(expected interface{}) *Verifier {
+func (v *Verifier) Be(expected any) *Verifier {
 	if !reflect.DeepEqual(v.value, expected) {
 		message := "Expected values to have the same properties and values"
 		if v.message != "" {
@@ -37,7 +37,7 @@ func (v *Verifier) Be(expected interface{}) *Verifier {
 }
 
 // NotEqual verifica desigualdade
-func (v *Verifier) NotEqual(unexpected interface{}) *Verifier {
+func (v *Verifier) NotEqual(unexpected any) *Verifier {
 	if reflect.DeepEqual(v.value, unexpected) {
 		message := "Expected values to be different"
 		if v.message != "" {
@@ -107,7 +107,7 @@ func (v *Verifier) NotNil() *Verifier {
 }
 
 // isNil verifica se um valor é nil
-func isNil(value interface{}) bool {
+func isNil(value any) bool {
 	if value == nil {
 		return true
 	}
@@ -173,7 +173,7 @@ func (v *Verifier) Len(expected int) *Verifier {
 }
 
 // GT verifica se o valor é maior que o esperado
-func (v *Verifier) GT(threshold interface{}) *Verifier {
+func (v *Verifier) GT(threshold any) *Verifier {
 	val, ok := v.value.(float64)
 	if !ok {
 		if intVal, isInt := v.value.(int); isInt {
@@ -205,7 +205,7 @@ func (v *Verifier) GT(threshold interface{}) *Verifier {
 }
 
 // LT verifica se o valor é menor que o esperado
-func (v *Verifier) LT(threshold interface{}) *Verifier {
+func (v *Verifier) LT(threshold any) *Verifier {
 	val, ok := v.value.(float64)
 	if !ok {
 		if intVal, isInt := v.value.(int); isInt {
@@ -236,35 +236,47 @@ func (v *Verifier) LT(threshold interface{}) *Verifier {
 	return v
 }
 
-// ExpectPanic verifica se uma função causa um pânico
-func (v *Verifier) Panic(fn func(), msg ...string) *Verifier {
+// Panic verifica se a função armazenada no Verifier causa um pânico.
+// A função deve ser passada para `Should()`, ex: `verify.Should(t, func(){...}).Panic()`
+func (v *Verifier) Panic() *Verifier {
+	fn, ok := v.value.(func())
+	if !ok {
+		v.t.Errorf("Expected a function (func()), but got %T", v.value)
+		return v
+	}
+
 	defer func() {
 		if r := recover(); r == nil {
 			message := "Expected function to panic"
-			if len(msg) > 0 {
-				message = msg[0]
+			if v.message != "" {
+				message = v.message
 			}
 			v.t.Errorf("%s: expected panic, but function did not panic", message)
 		}
 	}()
 	fn()
-
 	return v
 }
 
-// Expect NotPanic verifica se uma função não causa um pânico
-func (v *Verifier) NotPanic(fn func(), msg ...string) *Verifier {
+// NotPanic verifica se a função armazenada no Verifier não causa um pânico.
+// A função deve ser passada para `Should()`, ex: `verify.Should(t, func(){...}).NotPanic()`
+func (v *Verifier) NotPanic() *Verifier {
+	fn, ok := v.value.(func())
+	if !ok {
+		v.t.Errorf("Expected a function (func()), but got %T", v.value)
+		return v
+	}
+
 	defer func() {
 		if r := recover(); r != nil {
 			message := "Expected function to not panic"
-			if len(msg) > 0 {
-				message = msg[0]
+			if v.message != "" {
+				message = v.message
 			}
 			v.t.Errorf("%s: expected no panic, but function panicked with %v", message, r)
 		}
 	}()
 	fn()
-
 	return v
 }
 
